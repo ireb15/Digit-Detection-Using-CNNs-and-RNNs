@@ -1,3 +1,6 @@
+# This file is a modified version of the main.py file from the COMPSYS 302 labs. It has been modified to train and
+# test the der_CNN and der_RNN models we have derived from the lab code as a part of this Python project.
+
 from __future__ import print_function
 import torch
 import torch.optim as optim
@@ -11,16 +14,15 @@ import matplotlib.pyplot as plt
 import numpy as np
 from PIL import Image
 
-
-# This function shows an image.
+# This function saves an image.
 def imsave(img):
     npimg = img.numpy()
     npimg = (np.transpose(npimg, (1, 2, 0)) * 255).astype(np.uint8)
     im = Image.fromarray(npimg)
     im.save("./results/your_file.jpeg")
 
-# This function trains the example CNN model from the COMPSYS 302 labs.
-def train_cnn(log_interval, model, device, train_loader, optimizer, epoch):
+# This function trains the der_CNN model.
+def train_der_cnn(log_interval, model, device, train_loader, optimizer, epoch):
     model.train()
     for batch_idx, (data, target) in enumerate(train_loader):
         data, target = data.to(device), target.to(device)
@@ -35,8 +37,8 @@ def train_cnn(log_interval, model, device, train_loader, optimizer, epoch):
                 epoch, batch_idx * len(data), len(train_loader.dataset),
                 100. * batch_idx / len(train_loader), loss.item()))
 
-# This function trains the example RNN model from the COMPSYS 302 labs.
-def train_rnn(log_interval, model, device, train_loader, optimizer, epoch):
+# This function trains the der_RNN model.
+def train_der_rnn(log_interval, model, device, train_loader, optimizer, epoch):
     model.train()
     for batch_idx, (data, target) in enumerate(train_loader):
         data, target = data.to(device), target.to(device)
@@ -61,10 +63,10 @@ def test(model, device, test_loader):
     with torch.no_grad():
         for data, target in test_loader:
             print(data.shape)
-            # For the example CNN model and the DCNN model, the data size is (1000, 1, 28, 28). For the example RNN model
-            # and the DRNN model, we only need a data size of (1000, 28, 28). The extra dimension (1) needs to be squeezed
-            # out when working with the example RNN model and DRNN model.
-            data = torch.squeeze(data)
+            # For the example CNN model and the der_CNN model, the data size is (1000, 1, 28, 28). For the example RNN
+            # model and the der_RNN model, we only need a data size of (1000, 28, 28). The extra dimension (1) needs to
+            # be squeezed out when working with the example RNN model and der_RNN model.
+            #data = torch.squeeze(data)
             print(data.shape)
             data, target = data.to(device), target.to(device)
             output = model(data)
@@ -79,14 +81,19 @@ def test(model, device, test_loader):
         100. * correct / len(test_loader.dataset)))
 
 def main():
-    epoches = 14
+    # Training and testing specifications
+    epochs = 14
     gamma = 0.7
     log_interval = 10
     torch.manual_seed(1)
+    l_rate = 0.01
     save_model = True
 
-    # Specifications for the example RNN model from the lab.
-    RNN = True
+    # Model selection
+    der_CNN = False
+    der_RNN = False
+
+    # der_RNN model specifications
     N_STEPS = 28
     N_INPUTS = 28
     N_NEURONS = 150
@@ -99,6 +106,7 @@ def main():
 
 
     ######################   Torchvision    ###########################
+    # Load MNIST dataset.
     # Use data predefined loader
     # Pre-processing by using the transform.Compose
     # divide into batches
@@ -121,30 +129,39 @@ def main():
     # img = torchvision.utils.make_grid(images)
     # imsave(img)
 
-    ######################    Build network and run   ############################
-    if RNN:
-        model = ImageRNN(64, N_STEPS, N_INPUTS, N_NEURONS, N_OUTPUTS, device).to(device)
+    ######################    Build model and run   ############################
+    # Build model
+    if der_RNN:
+        model = der_RNN(64, N_STEPS, N_INPUTS, N_NEURONS, N_OUTPUTS, device).to(device)
     else:
-        model = Net().to(device)
+        model = der_CNN().to(device)
 
-    if RNN:
-        optimizer = optim.Adadelta(model.parameters(), lr=0.01)
+    # Set optimizer
+    if der_RNN:
+        optimizer = optim.Adadelta(model.parameters(), lr=l_rate)
     else:
-        optimizer = optim.Adam(model.parameters(), lr=0.001)
+        optimizer = optim.Adam(model.parameters(), lr=l_rate)
 
     scheduler = StepLR(optimizer, step_size=1, gamma=gamma)
 
-    for epoch in range(1, epoches + 1):
-        if RNN:
-            train_rnn(log_interval, model, device, train_loader, optimizer, epoch)
+    # Training and testing
+    for epoch in range(1, epochs + 1):
+        if der_RNN:
+            train_der_rnn(log_interval, model, device, train_loader, optimizer, epoch)
         else:
-            train_cnn(log_interval, model, device, train_loader, optimizer, epoch)
+            train_der_cnn(log_interval, model, device, train_loader, optimizer, epoch)
 
         test(model, device, test_loader)
         scheduler.step()
 
     if save_model:
-        torch.save(model.state_dict(), "./results/mnist_cnn.pt")
+        if der_RNN:
+            torch.save(model.state_dict(), "./results/mnist_der_RNN.pt")
+        else:
+            torch.save(model.state_dict(), "./results/mnist_der_CNN.pt")
+    # Figure out how to load saved models to prevent the need for re-training every time main is run.
+
+    # Add graph generation and comparison of two models' accuracy and loss value.
 
 
 if __name__ == '__main__':
