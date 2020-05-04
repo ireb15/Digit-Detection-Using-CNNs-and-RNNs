@@ -7,12 +7,14 @@ import torch.optim as optim
 import torchvision
 from torchvision import datasets, transforms
 from torch.optim.lr_scheduler import StepLR
-from models.conv import Net
-from models.rnn_conv import ImageRNN
-import torch.nn.functional as F
+from models.der_cnn import der_CNN
+from models.der_rnn import der_RNN
+import torch.nn.functional as func
 import matplotlib.pyplot as plt
 import numpy as np
 from PIL import Image
+from sklearn import metrics
+
 
 # This function saves an image.
 def imsave(img):
@@ -21,56 +23,64 @@ def imsave(img):
     im = Image.fromarray(npimg)
     im.save("./results/your_file.jpeg")
 
+
 # This function trains the der_CNN model.
-def train_der_cnn(log_interval, model, device, train_loader, optimizer, epoch):
+def train_der_cnn(log_interval, model, device, train_loader, optimizer, epoch, losses):
     model.train()
     for batch_idx, (data, target) in enumerate(train_loader):
         data, target = data.to(device), target.to(device)
-        # zero the parameter gradients
+        # Clear the parameter gradients to prevent accumulation of existing gradients
         optimizer.zero_grad()
-        # forward + backward + optimize
-        output = model(data)
-        loss = F.nll_loss(output, target)
-        loss.backward(); optimizer.step()
+        output = model(data)  # Forward
+        loss = func.nll_loss(output, target)
+        losses.append(loss)  # Collect the losses to be averaged for each epoch for plotting.
+        loss.backward()  # Backward
+        optimizer.step()  # Optimize (carry out the updates)
+        # Print training log
         if batch_idx % log_interval == 0:
             print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
                 epoch, batch_idx * len(data), len(train_loader.dataset),
-                100. * batch_idx / len(train_loader), loss.item()))
+                       100. * batch_idx / len(train_loader), loss.item()))
+
 
 # This function trains the der_RNN model.
-def train_der_rnn(log_interval, model, device, train_loader, optimizer, epoch):
+def train_der_rnn(log_interval, model, device, train_loader, optimizer, epoch, losses):
     model.train()
     for batch_idx, (data, target) in enumerate(train_loader):
         data, target = data.to(device), target.to(device)
+        # Clear the parameter gradients to prevent accumulation of existing gradients
         optimizer.zero_grad()
-        # reset hidden states
+        # Reset hidden states
         model.hidden = model.init_hidden()
         data = data.view(-1, 28, 28)
-        outputs = model(data)
+        outputs = model(data)  # Forward
         criterion = torch.nn.CrossEntropyLoss()
         loss = criterion(outputs, target)
-        loss.backward(); optimizer.step()
+        losses.append(loss)  # Collect the losses to be averaged for each epoch for plotting.
+        loss.backward()  # Backward
+        optimizer.step()  # Optimize (carry out the updates)
+        # Print training log
         if batch_idx % log_interval == 0:
             print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
                 epoch, batch_idx * len(data), len(train_loader.dataset),
-                100. * batch_idx / len(train_loader), loss.item()))
+                       100. * batch_idx / len(train_loader), loss.item()))
+
 
 # This function tests any of the given models.
-def test(model, device, test_loader):
+def test(model, device, test_loader, model_bool, initial_loss):
     model.eval()
     test_loss = 0
     correct = 0
     with torch.no_grad():
         for data, target in test_loader:
-            print(data.shape)
-            # For the example CNN model and the der_CNN model, the data size is (1000, 1, 28, 28). For the example RNN
-            # model and the der_RNN model, we only need a data size of (1000, 28, 28). The extra dimension (1) needs to
-            # be squeezed out when working with the example RNN model and der_RNN model.
-            #data = torch.squeeze(data)
-            print(data.shape)
+            # For the example der_CNN model, the data size is (1000, 1, 28, 28). For the der_RNN model, we only need
+            # a data size of (1000, 28, 28). The extra dimension (1) needs to be squeezed out when working with the
+            # der_RNN model.
+            if model_bool:
+                data = torch.squeeze(data)
             data, target = data.to(device), target.to(device)
             output = model(data)
-            test_loss += F.nll_loss(output, target, reduction='sum').item()  # sum up batch loss
+            test_loss += func.nll_loss(output, target, reduction='sum').item()  # sum up batch loss
             pred = output.argmax(dim=1, keepdim=True)  # get the index of the max log-probability
             correct += pred.eq(target.view_as(pred)).sum().item()
 
@@ -79,33 +89,34 @@ def test(model, device, test_loader):
     print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
         test_loss, correct, len(test_loader.dataset),
         100. * correct / len(test_loader.dataset)))
+    initial_loss.append(test_loss / 10000)
+    return 100. * correct / len(test_loader.dataset)
+
 
 def main():
+    # Model selection (if dRNN = False, der_CNN is utilised, and vice versa)
+    dRNN = False
+
     # Training and testing specifications
-    epochs = 14
+    if dRNN:
+        epochs = 14
+    else:
+        epochs = 8
     gamma = 0.7
     log_interval = 10
     torch.manual_seed(1)
     l_rate = 0.01
     save_model = True
+    load_model = False
 
-    # Model selection
-    der_CNN = False
-    der_RNN = False
-
-    # der_RNN model specifications
-    N_STEPS = 28
-    N_INPUTS = 28
+    # der_RNN neuron specification
     N_NEURONS = 150
-    N_OUTPUTS = 10
 
-    # Check whether the current machine can utilize Cuda to speed up training.
+    # Check whether the current machine can utilize Cuda to speed up training, and use it if possible.
     use_cuda = torch.cuda.is_available()
-    # Use Cuda if possible.
     device = torch.device("cuda" if use_cuda else "cpu")
 
-
-    ######################   Torchvision    ###########################
+    ########################### Torchvision ###########################
     # Load MNIST dataset.
     # Use data predefined loader
     # Pre-processing by using the transform.Compose
@@ -119,49 +130,92 @@ def main():
         batch_size=64, shuffle=True, **kwargs)
     test_loader = torch.utils.data.DataLoader(
         datasets.MNIST('../data', train=False, transform=transforms.Compose([
-                           transforms.ToTensor()
-                       ])),
+            transforms.ToTensor()
+        ])),
         batch_size=1000, shuffle=True, **kwargs)
 
-    # get some random training images
+    # Save some random training images
     dataiter = iter(train_loader)
     images, labels = dataiter.next()
-    # img = torchvision.utils.make_grid(images)
-    # imsave(img)
+    img = torchvision.utils.make_grid(images)
+    imsave(img)
 
-    ######################    Build model and run   ############################
-    # Build model
-    if der_RNN:
-        model = der_RNN(64, N_STEPS, N_INPUTS, N_NEURONS, N_OUTPUTS, device).to(device)
+    ########################### Build Model ###########################
+    if dRNN:
+        model = der_RNN(64, 28, 28, N_NEURONS, 10, device).to(device)
     else:
         model = der_CNN().to(device)
 
     # Set optimizer
-    if der_RNN:
+    if dRNN:
         optimizer = optim.Adadelta(model.parameters(), lr=l_rate)
     else:
         optimizer = optim.Adam(model.parameters(), lr=l_rate)
 
     scheduler = StepLR(optimizer, step_size=1, gamma=gamma)
 
-    # Training and testing
+    ########################### Training and Testing ###########################
+    train_losses = []
+    accuracies = []
+    temp_list = []
+    # Test with initialised network parameters to see pre-training results.
+    accuracy = test(model, device, test_loader, dRNN, temp_list)
+    initial_loss = temp_list[0]     # Store the pre-training loss for plotting.
+    temp_list = []
+    accuracies.append(accuracy)     # Store the pre-training accuracy for plotting.
+    # Train model, testing it after each epoch.
     for epoch in range(1, epochs + 1):
-        if der_RNN:
-            train_der_rnn(log_interval, model, device, train_loader, optimizer, epoch)
+        if dRNN:
+            train_der_rnn(log_interval, model, device, train_loader, optimizer, epoch, temp_list)
         else:
-            train_der_cnn(log_interval, model, device, train_loader, optimizer, epoch)
-
-        test(model, device, test_loader)
+            train_der_cnn(log_interval, model, device, train_loader, optimizer, epoch, temp_list)
+        # Average the training losses for each epoch for plotting.
+        train_losses.append(sum(temp_list) / len(temp_list))
+        temp_list = []
+        print('Testing...')
+        accuracy = test(model, device, test_loader, dRNN, temp_list)
+        temp_list = []
+        accuracies.append(accuracy)  # Collect the accuracy when tested after each epoch for plotting.
         scheduler.step()
+    # Prepend pre-training loss for plotting training losses.
+    train_losses.insert(0, initial_loss)
 
+    ########################### Saving & Loading Model ###########################
     if save_model:
-        if der_RNN:
-            torch.save(model.state_dict(), "./results/mnist_der_RNN.pt")
+        if dRNN:
+            torch.save(model.state_dict(), "./results/der_RNN.pt")
         else:
-            torch.save(model.state_dict(), "./results/mnist_der_CNN.pt")
-    # Figure out how to load saved models to prevent the need for re-training every time main is run.
+            torch.save(model.state_dict(), "./results/der_CNN.pt")
+    if load_model:
+        if dRNN:
+            torch.load(model.state_dict(), "./results/der_RNN.pt")
+        else:
+            torch.load(model.state_dict(), "./results/der_CNN.pt")
 
-    # Add graph generation and comparison of two models' accuracy and loss value.
+    ########################### Graph Generation ###########################
+    plt.figure()
+    # Average training loss for each epoch.
+    plt.subplot(2, 1, 1)
+    plt.plot(train_losses)
+    plt.xlabel('Epoch')
+    plt.ylabel('Average Training Loss')
+    # Accuracy after each epoch.
+    plt.subplot(2, 1, 2)
+    plt.plot(accuracies)
+    plt.xlabel('Epoch')
+    plt.ylabel('Accuracy')
+    # Save and show figure.
+    if dRNN:
+        plt.savefig('der_RNN results.png')
+    else:
+        plt.savefig('der_CNN results.png')
+    plt.show()
+
+    print('Graphs have been saved.')
+
+    # Confusion matrix, and precision and recall (among other metrics)
+    # print(metrics.confusion_matrix(labels_true, labels_pred))
+    # print(metrics.classification_report(labels_true, labels_pred, digits = 10))
 
 
 if __name__ == '__main__':

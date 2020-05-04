@@ -6,6 +6,7 @@ import torch
 
 
 class der_RNN(nn.Module):
+    # Let's see if we can hard code some of these.
     def __init__(self, batch_size, n_steps, n_inputs, n_neurons, n_outputs, device):
         super(der_RNN, self).__init__()
         self.device = device
