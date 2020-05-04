@@ -109,9 +109,6 @@ def main():
     save_model = True
     load_model = False
 
-    # der_RNN neuron specification
-    N_NEURONS = 150
-
     # Check whether the current machine can utilize Cuda to speed up training, and use it if possible.
     use_cuda = torch.cuda.is_available()
     device = torch.device("cuda" if use_cuda else "cpu")
@@ -142,7 +139,7 @@ def main():
 
     ########################### Build Model ###########################
     if dRNN:
-        model = der_RNN(64, 28, 28, N_NEURONS, 10, device).to(device)
+        model = der_RNN(device).to(device)
     else:
         model = der_CNN().to(device)
 

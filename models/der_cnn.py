@@ -18,9 +18,11 @@ class der_CNN(nn.Module):
         # "Filter out" some of the input based on their probability of being zeroed.
         self.dropout1 = nn.Dropout2d(0.5)
         self.dropout2 = nn.Dropout2d(0.25)
-        # Fully connected layer: input size, output size
-        self.fc1 = nn.Linear(9216, 128)
-        self.fc2 = nn.Linear(128, 10)
+        #self.dropout3 = nn.Dropout2d(0.1)
+        # Fully connected layers: input size, output size
+        self.fc1 = nn.Linear(9216, 120)
+        self.fc2 = nn.Linear(120, 84)
+        self.fc3 = nn.Linear(84, 10)
 
     # This function links all of the layers of the model together and passes the input data through them.
     # Activation function: ReLU
@@ -37,5 +39,7 @@ class der_CNN(nn.Module):
         input = silu(input)
         input = self.dropout2(input)
         input = self.fc2(input)
+        #input = self.dropout3(input)
+        input = self.fc3(input)
         output = func.log_softmax(input, dim=1)
         return output
