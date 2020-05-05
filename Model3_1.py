@@ -8,14 +8,14 @@ import torch.optim as optim
 import numpy as np
 import matplotlib.pyplot as plt
 import time
-from torchvision import datasets
 
+from torchvision import datasets
 from sklearn.metrics import confusion_matrix 
 from sklearn.metrics import accuracy_score 
-from sklearn.metrics import classification_report
+from sklearn.metrics import f1_score
 
 #Define constants that will be later used in the training of the model
-NUM_EPOCHS = 1
+NUM_EPOCHS = 6
 BATCH_SIZE = 10
 LEARNING_RATE = 0.01
 
@@ -84,9 +84,9 @@ class Net(nn.Module):
  
     #The forward function defines the structure of the nework 
     def forward(self, x):
-        x = F.tanh(self.conv1(x))
+        x = F.torch.tanh(self.conv1(x))
         x = F.max_pool2d(x, kernel_size=2)
-        x = F.tanh(self.conv2(x))
+        x = F.torch.tanh(self.conv2(x))
         x = F.max_pool2d(x, kernel_size=2)
         x = x.view(x.size(0), -1)
         x = F.relu(self.fc1(x))
@@ -179,3 +179,22 @@ plt.xlabel('Epoch')
 plt.ylabel('Test Accuracy')
 plt.savefig('test_acc.png')
 plt.show()
+
+def test_label_predictions(model, device, testloader):
+    model.eval()
+    actuals = []
+    predictions = []
+    with torch.no_grad():
+        for data, target in testloader:
+            data, target = data.to(device), target.to(device)
+            output = model(data)
+            prediction = output.argmax(dim=1, keepdim=True)
+            actuals.extend(target.view_as(prediction))
+            predictions.extend(prediction)
+    return [i.item() for i in actuals], [i.item() for i in predictions]
+
+actuals, predictions = test_label_predictions(net, device, testloader)
+print('Confusion matrix:')
+print(confusion_matrix(actuals, predictions))
+print('F1 score: %f' % f1_score(actuals, predictions, average='micro'))
+print('Accuracy score: %f' % accuracy_score(actuals, predictions))
