@@ -8,29 +8,34 @@ import torch
 class der_RNN(nn.Module):
     def __init__(self, device):
         super(der_RNN, self).__init__()
+        # RNN layer specifications
         self.device = device
-        self.n_neurons = 150  # Hidden
+        self.neurons = 150  # Hidden size
         self.batch_size = 64
-        self.n_steps = 28
-        self.n_inputs = 28
-        self.n_outputs = 10
-        # Basic RNN layer
-        self.basic_rnn = nn.RNN(self.n_inputs, self.n_neurons)
-        # Followed by a fully connected layer
-        self.FC = nn.Linear(self.n_neurons, self.n_outputs)
+        self.steps = 28
+        self.inputs = 28
+        self.outputs = 10
+        self.dropout = 0    # Dropout layers
+        self.bidirectional = False
+        self.layers = 1     # Recurrent layers
+        self.activ_func = "relu"
+        # RNN layer
+        self.rnn_layer = nn.RNN(self.inputs, self.neurons, self.layers, nonlinearity=self.activ_func,
+                                dropout=self.dropout, bidirectional=self.bidirectional)
+        # Fully connected layer
+        self.fc = nn.Linear(self.neurons, self.outputs)
 
+    # This function initialises a hidden layer
     def init_hidden(self, ):
-        # (num_layers, batch_size, n_neurons)
-        return (torch.zeros(1, self.batch_size, self.n_neurons)).to(self.device)
+        return (torch.zeros(self.layers, self.batch_size, self.neurons)).to(self.device)
 
     # This function links all of the layers of the model together and passes the input data through them.
-    def forward(self, X):
-        # transforms X to dimensions: n_steps X batch_size X n_inputs
-        # 28 * 64 * 28
-        X = X.permute(1, 0, 2)
-        self.batch_size = X.size(1)
-        self.hidden = self.init_hidden()
-        lstm_out, self.hidden = self.basic_rnn(X, self.hidden)
-        out = self.FC(self.hidden)
-        # Output from fully connected layer  directly
-        return out.view(-1, self.n_outputs)  # batch_size X n_output
+    def forward(self, input):
+        # Transform input to dimensions 28x64x28 (steps x batch_size x inputs)
+        input = input.permute(1, 0, 2)
+        self.batch_size = input.size(1)
+        self.hidden = self.init_hidden()    # Create the hidden layer
+        lstm_out, self.hidden = self.rnn_layer(input, self.hidden)
+        out = self.fc(self.hidden)
+        # Output from fully connected layer directly
+        return out.view(-1, self.outputs)  # batch_size x outputs

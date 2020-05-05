@@ -95,7 +95,7 @@ def test(model, device, test_loader, model_bool, initial_loss):
 
 def main():
     # Model selection (if dRNN = False, der_CNN is utilised, and vice versa)
-    dRNN = False
+    dRNN = True
 
     # Training and testing specifications
     if dRNN:
@@ -203,9 +203,9 @@ def main():
     plt.ylabel('Accuracy')
     # Save and show figure.
     if dRNN:
-        plt.savefig('der_RNN results.png')
+        plt.savefig('./results/der_RNN results.png')
     else:
-        plt.savefig('der_CNN results.png')
+        plt.savefig('./results/der_CNN results.png')
     plt.show()
 
     print('Graphs have been saved.')
