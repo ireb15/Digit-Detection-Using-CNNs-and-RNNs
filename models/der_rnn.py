@@ -18,7 +18,7 @@ class der_RNN(nn.Module):
         self.dropout = 0    # Dropout layers
         self.bidirectional = False
         self.layers = 1     # Recurrent layers
-        self.activ_func = "relu"
+        self.activ_func = "tanh"
         # RNN layer
         self.rnn_layer = nn.RNN(self.inputs, self.neurons, self.layers, nonlinearity=self.activ_func,
                                 dropout=self.dropout, bidirectional=self.bidirectional)
