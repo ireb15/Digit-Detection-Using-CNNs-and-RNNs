@@ -10,7 +10,7 @@ class der_RNN(nn.Module):
         super(der_RNN, self).__init__()
         # RNN layer specifications
         self.device = device
-        self.neurons = 150  # Hidden size
+        self.neurons = 256  # Hidden size
         self.batch_size = 64
         self.steps = 28
         self.inputs = 28
