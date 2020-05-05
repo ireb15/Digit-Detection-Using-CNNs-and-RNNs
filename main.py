@@ -86,8 +86,23 @@ def test(model, device, test_loader, model_bool, initial_loss):
 
 
 def main():
-    # Model selection (if dRNN = False, der_CNN is utilised, and vice versa)
-    dRNN = False
+    # Model selection prompt (if dRNN = False, der_CNN is utilised, and vice versa)
+    selected = False
+    while selected == False:
+        print("Select the model you'd like to train and test.")
+        model_sel = input("Type cnn for model 1 (der_CNN) or rnn for model 2 (der_RNN): ")
+        if model_sel == "cnn":
+            dRNN = False
+            selected = True
+        elif model_sel == "rnn":
+            dRNN = True
+            selected = True
+        else:
+            print("You did not select a model, please try again.")
+    if dRNN == False:
+        print('Running der_CNN...')
+    else:
+        print('Running der_RNN...')
 
     # Training and testing specifications
     if dRNN:
