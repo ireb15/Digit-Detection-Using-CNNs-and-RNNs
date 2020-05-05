@@ -8,11 +8,11 @@ import torch.optim as optim
 import numpy as np
 import matplotlib.pyplot as plt
 import time
-from torchvision import datasets
 
+from torchvision import datasets
 from sklearn.metrics import confusion_matrix 
 from sklearn.metrics import accuracy_score 
-from sklearn.metrics import classification_report
+from sklearn.metrics import f1_score
 
 #Define constants that will be later used in the training of the model
 NUM_EPOCHS = 6
@@ -92,7 +92,7 @@ class Net(nn.Module):
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
         x = self.fc3(x)
-        return F.log_softmax(x)
+        return F.log_softmax(x, dim = 1)
 
 net = Net()
 print(net)
@@ -180,3 +180,22 @@ plt.xlabel('Epoch')
 plt.ylabel('Test Accuracy')
 plt.savefig('test_acc.png')
 plt.show()
+
+def test_label_predictions(model, device, testloader):
+    model.eval()
+    actuals = []
+    predictions = []
+    with torch.no_grad():
+        for data, target in testloader:
+            data, target = data.to(device), target.to(device)
+            output = model(data)
+            prediction = output.argmax(dim=1, keepdim=True)
+            actuals.extend(target.view_as(prediction))
+            predictions.extend(prediction)
+    return [i.item() for i in actuals], [i.item() for i in predictions]
+
+actuals, predictions = test_label_predictions(net, device, testloader)
+print('Confusion matrix:')
+print(confusion_matrix(actuals, predictions))
+print('F1 score: %f' % f1_score(actuals, predictions, average='micro'))
+print('Accuracy score: %f' % accuracy_score(actuals, predictions))
