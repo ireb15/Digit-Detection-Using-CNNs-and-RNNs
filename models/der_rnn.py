@@ -8,7 +8,7 @@ import torch
 class der_RNN(nn.Module):
     def __init__(self, device):
         super(der_RNN, self).__init__()
-        # RNN layer specifications
+        # RNN specifications
         self.device = device
         self.neurons = 256  # Hidden size
         self.batch_size = 64
@@ -18,10 +18,9 @@ class der_RNN(nn.Module):
         self.dropout = 0    # Dropout layers
         self.bidirectional = False
         self.layers = 1     # Recurrent layers
-        self.activ_func = "tanh"
-        # RNN layer
-        self.rnn_layer = nn.RNN(self.inputs, self.neurons, self.layers, nonlinearity=self.activ_func,
-                                dropout=self.dropout, bidirectional=self.bidirectional)
+        self.activ_func = "relu"
+        self.rnn = nn.RNN(self.inputs, self.neurons, self.layers, nonlinearity=self.activ_func,
+                          dropout=self.dropout, bidirectional=self.bidirectional)
         # Fully connected layer
         self.fc = nn.Linear(self.neurons, self.outputs)
 
@@ -35,7 +34,7 @@ class der_RNN(nn.Module):
         input = input.permute(1, 0, 2)
         self.batch_size = input.size(1)
         self.hidden = self.init_hidden()    # Create the hidden layer
-        lstm_out, self.hidden = self.rnn_layer(input, self.hidden)
+        lstm_out, self.hidden = self.rnn(input, self.hidden)
         out = self.fc(self.hidden)
         # Output from fully connected layer directly
         return out.view(-1, self.outputs)  # batch_size x outputs

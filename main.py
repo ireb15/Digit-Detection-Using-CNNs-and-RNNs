@@ -16,14 +16,6 @@ from PIL import Image
 from sklearn import metrics
 
 
-# This function saves an image.
-def imsave(img):
-    npimg = img.numpy()
-    npimg = (np.transpose(npimg, (1, 2, 0)) * 255).astype(np.uint8)
-    im = Image.fromarray(npimg)
-    im.save("./results/your_file.jpeg")
-
-
 # This function trains the der_CNN model.
 def train_der_cnn(log_interval, model, device, train_loader, optimizer, epoch, losses):
     model.train()
@@ -95,7 +87,7 @@ def test(model, device, test_loader, model_bool, initial_loss):
 
 def main():
     # Model selection (if dRNN = False, der_CNN is utilised, and vice versa)
-    dRNN = True
+    dRNN = False
 
     # Training and testing specifications
     if dRNN:
@@ -130,12 +122,6 @@ def main():
             transforms.ToTensor()
         ])),
         batch_size=1000, shuffle=True, **kwargs)
-
-    # Save some random training images
-    dataiter = iter(train_loader)
-    images, labels = dataiter.next()
-    img = torchvision.utils.make_grid(images)
-    imsave(img)
 
     ########################### Build Model ###########################
     if dRNN:
