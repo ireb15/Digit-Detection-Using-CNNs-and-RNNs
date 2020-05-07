@@ -13,6 +13,7 @@ class der_CNN(nn.Module):
     def __init__(self):
         super(der_CNN, self).__init__()
         # Convolutional layers: input channels, output channels, kernel size, stride
+        # Conv1: 1 input channel since the MNIST images are grayscale
         self.conv1 = nn.Conv2d(1, 32, 3, 1)
         self.conv2 = nn.Conv2d(32, 64, 3, 1)
         # Dropouts: probability
@@ -32,7 +33,7 @@ class der_CNN(nn.Module):
         input = silu(input)
         input = self.conv2(input)
         input = silu(input)
-        input = func.max_pool2d(input, 2)
+        input = func.max_pool2d(input, 2)   # Halves the image
         input = self.dropout1(input)
         input = torch.flatten(input, 1)
         input = self.fc1(input)

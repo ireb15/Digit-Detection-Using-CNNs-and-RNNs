@@ -5,6 +5,7 @@ from __future__ import print_function
 import torch
 import torch.optim as optim
 import torchvision
+from sklearn.metrics import confusion_matrix, f1_score, accuracy_score
 from torchvision import datasets, transforms
 from torch.optim.lr_scheduler import StepLR
 from models.der_cnn import der_CNN
@@ -12,8 +13,6 @@ from models.der_rnn import der_RNN
 import torch.nn.functional as func
 import matplotlib.pyplot as plt
 import numpy as np
-from PIL import Image
-from sklearn import metrics
 
 
 # This function trains the der_CNN model.
@@ -25,7 +24,7 @@ def train_der_cnn(log_interval, model, device, train_loader, optimizer, epoch, l
         optimizer.zero_grad()
         output = model(data)  # Forward
         loss = func.nll_loss(output, target)
-        losses.append(loss)  # Collect the losses to be averaged for each epoch for plotting.
+        losses.append(loss)  # Collect the losses for plotting.
         loss.backward()  # Backward
         optimizer.step()  # Optimize (carry out the updates)
         # Print training log
@@ -48,7 +47,7 @@ def train_der_rnn(log_interval, model, device, train_loader, optimizer, epoch, l
         outputs = model(data)  # Forward
         criterion = torch.nn.CrossEntropyLoss()
         loss = criterion(outputs, target)
-        losses.append(loss)  # Collect the losses to be averaged for each epoch for plotting.
+        losses.append(loss)  # Collect the losses for plotting.
         loss.backward()  # Backward
         optimizer.step()  # Optimize (carry out the updates)
         # Print training log
@@ -59,10 +58,12 @@ def train_der_rnn(log_interval, model, device, train_loader, optimizer, epoch, l
 
 
 # This function tests any of the given models.
-def test(model, device, test_loader, model_bool, initial_loss):
+def test(model, device, test_loader, model_bool):
     model.eval()
     test_loss = 0
     correct = 0
+    labels_cor = []
+    labels_pred = []
     with torch.no_grad():
         for data, target in test_loader:
             # For the example der_CNN model, the data size is (1000, 1, 28, 28). For the der_RNN model, we only need
@@ -74,22 +75,24 @@ def test(model, device, test_loader, model_bool, initial_loss):
             output = model(data)
             test_loss += func.nll_loss(output, target, reduction='sum').item()  # sum up batch loss
             pred = output.argmax(dim=1, keepdim=True)  # get the index of the max log-probability
+            labels_cor.extend(target.view_as(pred))
+            labels_pred.extend(pred)
             correct += pred.eq(target.view_as(pred)).sum().item()
 
     test_loss /= len(test_loader.dataset)
 
-    print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
+    print('Test set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
         test_loss, correct, len(test_loader.dataset),
         100. * correct / len(test_loader.dataset)))
-    initial_loss.append(test_loss / 10000)
-    return 100. * correct / len(test_loader.dataset)
+    # initial_loss.append(test_loss / 10000)
+    return [100. * correct / len(test_loader.dataset)], [i.item() for i in labels_pred], [i.item() for i in labels_cor]
 
 
 def main():
     # Model selection prompt (if dRNN = False, der_CNN is utilised, and vice versa)
     selected = False
+    print("\nSelect the model you'd like to train and test.")
     while selected == False:
-        print("Select the model you'd like to train and test.")
         model_sel = input("Type cnn for model 1 (der_CNN) or rnn for model 2 (der_RNN): ")
         if model_sel == "cnn":
             dRNN = False
@@ -100,9 +103,9 @@ def main():
         else:
             print("You did not select a model, please try again.")
     if dRNN == False:
-        print('Running der_CNN...')
+        print('\nRunning der_CNN...\n')
     else:
-        print('Running der_RNN...')
+        print('\nRunning der_RNN...\n')
 
     # Training and testing specifications
     if dRNN:
@@ -155,28 +158,21 @@ def main():
     ########################### Training and Testing ###########################
     train_losses = []
     accuracies = []
-    temp_list = []
     # Test with initialised network parameters to see pre-training results.
-    accuracy = test(model, device, test_loader, dRNN, temp_list)
-    initial_loss = temp_list[0]     # Store the pre-training loss for plotting.
-    temp_list = []
-    accuracies.append(accuracy)     # Store the pre-training accuracy for plotting.
+    accuracy, predicted, correct = test(model, device, test_loader, dRNN)
+    accuracies.append(accuracy)  # Store the pre-training accuracy for plotting.
+    predicted = []
+    correct = []
     # Train model, testing it after each epoch.
     for epoch in range(1, epochs + 1):
         if dRNN:
-            train_der_rnn(log_interval, model, device, train_loader, optimizer, epoch, temp_list)
+            train_der_rnn(log_interval, model, device, train_loader, optimizer, epoch, train_losses)
         else:
-            train_der_cnn(log_interval, model, device, train_loader, optimizer, epoch, temp_list)
-        # Average the training losses for each epoch for plotting.
-        train_losses.append(sum(temp_list) / len(temp_list))
-        temp_list = []
-        print('Testing...')
-        accuracy = test(model, device, test_loader, dRNN, temp_list)
-        temp_list = []
+            train_der_cnn(log_interval, model, device, train_loader, optimizer, epoch, train_losses)
+        print('\nTesting...')
+        accuracy, predicted, correct = test(model, device, test_loader, dRNN)
         accuracies.append(accuracy)  # Collect the accuracy when tested after each epoch for plotting.
         scheduler.step()
-    # Prepend pre-training loss for plotting training losses.
-    train_losses.insert(0, initial_loss)
 
     ########################### Saving & Loading Model ###########################
     if save_model:
@@ -195,7 +191,7 @@ def main():
     # Average training loss for each epoch.
     plt.subplot(2, 1, 1)
     plt.plot(train_losses)
-    plt.xlabel('Epoch')
+    plt.xlabel('Training Batch')
     plt.ylabel('Average Training Loss')
     # Accuracy after each epoch.
     plt.subplot(2, 1, 2)
@@ -209,11 +205,13 @@ def main():
         plt.savefig('./results/der_CNN results.png')
     plt.show()
 
-    print('Graphs have been saved.')
+    print('Graphs have been saved in the following folder:\n./results')
 
-    # Confusion matrix, and precision and recall (among other metrics)
-    # print(metrics.confusion_matrix(labels_true, labels_pred))
-    # print(metrics.classification_report(labels_true, labels_pred, digits = 10))
+    # Confusion matrix and other metrics
+    print('\nConfusion Matrix:')
+    print(confusion_matrix(correct, predicted))
+    print('\nF1 Score: %f' % f1_score(correct, predicted, average='micro'))
+    print('\nAccuracy: %f' % accuracy_score(correct, predicted))
 
 
 if __name__ == '__main__':
