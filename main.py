@@ -5,7 +5,7 @@ from __future__ import print_function
 import torch
 import torch.optim as optim
 import torchvision
-from sklearn.metrics import confusion_matrix, f1_score, accuracy_score
+from sklearn.metrics import confusion_matrix, f1_score, accuracy_score, classification_report
 from torchvision import datasets, transforms
 from torch.optim.lr_scheduler import StepLR
 from models.der_cnn import der_CNN
@@ -210,8 +210,11 @@ def main():
     # Confusion matrix and other metrics
     print('\nConfusion Matrix:')
     print(confusion_matrix(correct, predicted))
-    print('\nF1 Score: %f' % f1_score(correct, predicted, average='micro'))
-    print('\nAccuracy: %f' % accuracy_score(correct, predicted))
+    print('\n')
+    #print('\nF1 Score: %f' % f1_score(correct, predicted, average='micro'))
+    #print('\nAccuracy: %f\n' % accuracy_score(correct, predicted))
+    target_names = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
+    print(classification_report(correct, predicted, target_names=target_names))
 
 
 if __name__ == '__main__':
