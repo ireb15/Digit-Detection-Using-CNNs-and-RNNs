@@ -13,6 +13,7 @@ from torchvision import datasets
 from sklearn.metrics import confusion_matrix 
 from sklearn.metrics import accuracy_score 
 from sklearn.metrics import f1_score
+from sklearn.metrics import classification_report
 
 #Define constants that will be later used in the training of the model
 NUM_EPOCHS = 6
