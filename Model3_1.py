@@ -51,7 +51,7 @@ testloader = torch.utils.data.DataLoader(
     shuffle = False
 )
 
-#This following code is used to visualise the data
+#This following code is used to visualise data
 for batch_1 in trainloader:
     batch = batch_1
     break
@@ -180,6 +180,8 @@ plt.ylabel('Test Accuracy')
 plt.savefig('test_acc.png')
 plt.show()
 
+#The following code is for getting the prediction values and actual values
+#With these values we are able to output the confusion matrix, f1 score and accuracy score
 def test_label_predictions(model, device, testloader):
     model.eval()
     actuals = []
