@@ -200,3 +200,6 @@ print('Confusion matrix:')
 print(confusion_matrix(actuals, predictions))
 print('F1 score: %f' % f1_score(actuals, predictions, average='micro'))
 print('Accuracy score: %f' % accuracy_score(actuals, predictions))
+
+print('Classification Report:')
+print(classification_report(actuals, predictions, target_names= ['0', '1', '2', '3', '4', '5', '6', '7','8','9'] ))
