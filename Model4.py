@@ -181,6 +181,8 @@ plt.ylabel('Test Accuracy')
 plt.savefig('test_acc.png')
 plt.show()
 
+#The following code is for getting the prediction values and actual values
+#With these values we are able to output the confusion matrix, f1 score and accuracy score
 def test_label_predictions(model, device, testloader):
     model.eval()
     actuals = []
