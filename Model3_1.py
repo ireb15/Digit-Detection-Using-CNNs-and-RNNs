@@ -1,3 +1,15 @@
+""" Author: Ahad
+    University of Auckland
+    COMPSYS 302 PYTHON PROJECT """
+
+"""
+The following code is an implementation of a Handwritting Regocnition softaware.
+The following code is a able to load images of handritten digits from the MNIST Database
+and predict what number it represents. This model is based of the LeNet-5 Model.
+The code is modifed code from the interent. References in report.
+Modifed values; number of epochs, learning rate, batch size and activation functions.
+"""
+
 #Import the required packages 
 import torch
 import torchvision
