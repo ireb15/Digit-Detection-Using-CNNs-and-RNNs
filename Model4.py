@@ -1,3 +1,15 @@
+""" Author: Ahad
+    University of Auckland
+    COMPSYS 302 PYTHON PROJECT """
+
+"""
+The following code is an implementation of a Handwritting Regocnition softaware.
+The following code is a able to load images of handritten digits from the MNIST Database
+and predict what number it represents. This model is based of the LeNet-5 Model.
+The code is modifed code from the interent. References in report.
+Modifed values; number of epochs, learning rate, batch size and activation functions.
+"""
+
 #Import the required packages 
 import torch
 import torchvision
@@ -197,11 +209,13 @@ def test_label_predictions(model, device, testloader):
             predictions.extend(prediction)
     return [i.item() for i in actuals], [i.item() for i in predictions]
 
+#Values required for confusion matrix input
 actuals, predictions = test_label_predictions(net, device, testloader)
+
 print('Confusion matrix:')
 print(confusion_matrix(actuals, predictions))
-print('F1 score: %f' % f1_score(actuals, predictions, average='micro'))
-print('Accuracy score: %f' % accuracy_score(actuals, predictions))
 
 print('Classification Report:')
 print(classification_report(actuals, predictions, target_names= ['0', '1', '2', '3', '4', '5', '6', '7','8','9'] ))
+
+
