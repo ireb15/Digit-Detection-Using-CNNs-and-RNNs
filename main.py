@@ -84,7 +84,6 @@ def test(model, device, test_loader, model_bool):
     print('Test set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
         test_loss, correct, len(test_loader.dataset),
         100. * correct / len(test_loader.dataset)))
-    # initial_loss.append(test_loss / 10000)
     return [100. * correct / len(test_loader.dataset)], [i.item() for i in labels_pred], [i.item() for i in labels_cor]
 
 
