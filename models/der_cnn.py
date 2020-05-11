@@ -6,6 +6,7 @@ import torch.nn.functional as func
 import torch
 
 # This function represents the Sigmoid Linear Unit (SiLU) activation function.
+# Obtained from https://morioh.com/p/deaf2f23fbc6
 def silu(input):
     return input * torch.sigmoid(input)
 
@@ -26,7 +27,7 @@ class der_CNN(nn.Module):
         self.fc3 = nn.Linear(84, 10)
 
     # This function links all of the layers of the model together and passes the input data through them.
-    # Activation function: ReLU
+    # Activation function: SiLU
     # Loss function: Softmax
     def forward(self, input):
         input = self.conv1(input)
