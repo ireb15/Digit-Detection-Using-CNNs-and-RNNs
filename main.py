@@ -73,8 +73,8 @@ def test(model, device, test_loader, model_bool):
                 data = torch.squeeze(data)
             data, target = data.to(device), target.to(device)
             output = model(data)
-            test_loss += func.nll_loss(output, target, reduction='sum').item()  # sum up batch loss
-            pred = output.argmax(dim=1, keepdim=True)  # get the index of the max log-probability
+            test_loss += func.nll_loss(output, target, reduction='sum').item()  # Sum up batch loss
+            pred = output.argmax(dim=1, keepdim=True)  # Get the index of the max log-probability
             labels_cor.extend(target.view_as(pred))
             labels_pred.extend(pred)
             correct += pred.eq(target.view_as(pred)).sum().item()
@@ -126,7 +126,7 @@ def main():
     # Load MNIST dataset.
     # Use data predefined loader
     # Pre-processing by using the transform.Compose
-    # divide into batches
+    # Divide into batches
     kwargs = {'num_workers': 1, 'pin_memory': True} if use_cuda else {}
     train_loader = torch.utils.data.DataLoader(
         datasets.MNIST('../data', train=True, download=True,
@@ -210,8 +210,6 @@ def main():
     print('\nConfusion Matrix:')
     print(confusion_matrix(correct, predicted))
     print('\n')
-    #print('\nF1 Score: %f' % f1_score(correct, predicted, average='micro'))
-    #print('\nAccuracy: %f\n' % accuracy_score(correct, predicted))
     target_names = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
     print(classification_report(correct, predicted, target_names=target_names))
 
